@@ -44,19 +44,21 @@ All protocol logic, certificate handling, hash derivation, and port behaviors in
 
 ## 2. Control Protocol & TLS Handshake (Port 6466)
 
+### Protobuf Field Layout (Verified Live on TV):
+- **RemoteConfigure**: Outer Field 1 (`tag 0x0A`)
+- **RemoteSetActive**: Outer Field 2 (`tag 0x12`), inner field 1 = `1` (`active`)
+- **RemoteKeyInject**: Outer Field 3 (`tag 0x1A`), inner field 1 = `keycode`, inner field 2 = `action` (1 = `KEY_DOWN`, 2 = `KEY_UP`).
+
 ### mTLS Socket Setup & Timing Constraints:
 1. Connect `SecureSocket` to `$ipAddress:6466` presenting the client cert.
 2. **Mandatory Handshake Delays (Critical for Android TLS NIO)**:
    - Send `RemoteConfigure` $\rightarrow$ `await socket.flush()` $\rightarrow$ **Wait 150ms**.
    - Send `RemoteSetActive` $\rightarrow$ `await socket.flush()` $\rightarrow$ **Wait 150ms**.
-3. **Listen for TV Handshake Responses**:
+3. **Listen for TV Handshake Responses & Ping Handling**:
    - TV sends `RemoteStart` (`02 12 00`) to confirm control session active.
-   - TV periodically sends `RemotePing` (`0x32`), client MUST reply with `RemotePong` (`0x02 0x3A 0x00`).
+   - TV sends `RemotePing` (`08 05 12 02 3A 00` / tag `0x3A`), client MUST reply with `RemotePong` (`02 3A 00` & `08 05 12 02 3A 00`) within milliseconds, or TV terminates socket.
 
-### Keycode Payload Formatting:
-- **Key Down**: `[Field 1: Keycode, Field 2: Action=1 (KEY_DOWN)]`
-- **Key Up**: `[Field 1: Keycode, Field 2: Action=2 (KEY_UP)]`
-- Standard Android Keycodes:
+### Standard Android Keycodes:
   - `3`  = `KEYCODE_HOME`
   - `4`  = `KEYCODE_BACK`
   - `19` = `KEYCODE_DPAD_UP`
@@ -71,7 +73,7 @@ All protocol logic, certificate handling, hash derivation, and port behaviors in
 
 ---
 
-## 3. Master Volume Control (Google Cast Port 8009)
+## 3. Master Volume Control & Complete Mute (Google Cast Port 8009)
 
 ### Technical Discovery:
 When video or app overlays (YouTube, Netflix, Prime) are running on TCL Google TV, standard Android Remote keycodes on Port 6466 are intercepted by the media player app.
@@ -85,15 +87,16 @@ Every `SET_VOLUME` JSON payload **MUST INCLUDE `requestId`** (integer). Without 
 {
   "type": "SET_VOLUME",
   "volume": {
-    "level": 0.35,
-    "muted": false
+    "level": 0.0,
+    "muted": true
   },
   "requestId": 101
 }
 ```
 
-- Mute Command: Send `volume: { "muted": true }` with `requestId`.
-- Volume Control: Maintain current volume level (`0.0` to `1.0`) and send level steps.
+- **Mute Command**: Send `level: 0.0` and `muted: true` with `requestId` to guarantee complete silence (100% muted).
+- **Unmute Command**: Restore previous volume level `level: preMuteLevel` and `muted: false`.
+- **Volume Up / Down**: Update tracked volume level in 0.05 step increments.
 
 ---
 
