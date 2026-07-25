@@ -4,7 +4,7 @@ import 'dart:io';
 
 void main() async {
   const ip = '192.168.0.213';
-  print('=== TESTING GOOGLE CAST VOLUME LEVEL CONTROL ON TV ($ip:8009) ===');
+  print('=== UNMUTING TV VIA GOOGLE CAST PORT 8009 ($ip:8009) ===');
 
   try {
     final socket = await SecureSocket.connect(
@@ -68,23 +68,23 @@ void main() async {
     await socket.flush();
     await Future.delayed(const Duration(milliseconds: 300));
 
-    // Step 2: Send SET_VOLUME level 0.0 (MUTE / SILENT)
-    print('3. Sending SET_VOLUME { level: 0.0 } (SILENT / MUTE)... Listen to your TV!');
-    final muteMsg = buildCastMessage(
+    // Step 2: Send SET_VOLUME UNMUTE (muted: false, level: 0.35)
+    print('3. Sending SET_VOLUME { muted: false, level: 0.35 } (UNMUTE)... Listen to your TV!');
+    final unmuteMsg = buildCastMessage(
       namespace: 'urn:x-cast:com.google.cast.receiver',
       destinationId: 'receiver-0',
       payloadJson: {
         'type': 'SET_VOLUME',
-        'volume': {'level': 0.0, 'muted': true},
-        'requestId': 1002,
+        'volume': {'level': 0.35, 'muted': false},
+        'requestId': 1003,
       },
     );
-    socket.add(muteMsg);
+    socket.add(unmuteMsg);
     await socket.flush();
 
-    await Future.delayed(const Duration(milliseconds: 2500));
+    await Future.delayed(const Duration(milliseconds: 2000));
     socket.destroy();
-    print('\nFinished testing Google Cast Volume Level 0.0.');
+    print('\n🎉 Unmute command executed successfully!');
   } catch (e) {
     print('❌ Port 8009 Error: $e');
   }
