@@ -153,7 +153,20 @@ class TvRemoteController {
     final keycode = _getAndroidTvKeycode(command);
     final keyName = _commandDisplayName(command);
 
-    // 1. Check if device has been paired in local app storage
+    // 1. For Master System Volume commands (Vol+, Vol-, Mute), use Google Cast Port 8009
+    //    which controls the TV's Master Speaker Volume directly (even during YouTube/media playback).
+    if (command == RemoteCommand.volumeUp ||
+        command == RemoteCommand.volumeDown ||
+        command == RemoteCommand.volumeMute) {
+      AppLogger.log('Sending Master Volume ${command.name} to TV ($ip:8009)...');
+      final castRes = await GoogleCastController.sendCastCommand(ipAddress: ip, command: command);
+      if (castRes.success) {
+        AppLogger.log('Master Volume ${command.name} delivered to TV ($ip:8009)');
+        return castRes;
+      }
+    }
+
+    // 2. Check if device has been paired in local app storage for navigation keycodes
     final isPaired = await _pairingService.isDevicePaired(ip);
     if (!isPaired) {
       AppLogger.log('Device $ip is not paired yet. Initiating PIN pairing...');

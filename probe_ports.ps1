@@ -1,23 +1,23 @@
 $ip = "192.168.0.213"
-$ports = @(6466, 6467, 8008, 8009, 4123, 8737, 5555, 8000, 8080)
+$ports = @(6466, 6467, 8008, 8009, 8737, 8080, 8000, 4123, 1537, 5555, 8060, 8001)
 
-Write-Host "==========================================" -ForegroundColor Cyan
-Write-Host " Probing All Known TCL TV Control Ports on $ip" -ForegroundColor Cyan
-Write-Host "==========================================" -ForegroundColor Cyan
+Write-Host "Scanning TV ports at $ip..." -ForegroundColor Yellow
 
-foreach ($p in $ports) {
-    try {
-        $client = New-Object System.Net.Sockets.TcpClient
-        $iar = $client.BeginConnect($ip, $p, $null, $null)
-        $success = $iar.AsyncWaitHandle.WaitOne(300, $false)
-        if ($success -and $client.Connected) {
-            Write-Host "Port ${p}: OPEN ✅" -ForegroundColor Green
-            $client.Close()
-        } else {
-            Write-Host "Port ${p}: CLOSED" -ForegroundColor Red
-            $client.Close()
+foreach ($port in $ports) {
+    $tcp = New-Object System.Net.Sockets.TcpClient
+    $async = $tcp.BeginConnect($ip, $port, $null, $null)
+    $wait = $async.AsyncWaitHandle.WaitOne(400, $false)
+    if ($wait) {
+        try {
+            $tcp.EndConnect($async)
+            Write-Host "[OPEN] Port $port is active on TV" -ForegroundColor Green
+        } catch {
+            Write-Host "[CLOSED] Port $port" -ForegroundColor Gray
+        } finally {
+            $tcp.Close()
         }
-    } catch {
-        Write-Host "Port ${p}: CLOSED" -ForegroundColor Red
+    } else {
+        $tcp.Close()
+        Write-Host "[CLOSED] Port $port" -ForegroundColor Gray
     }
 }
