@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'app_logger.dart';
 import 'client_certificate_service.dart'; // kept for SharedPreferences cert override support
 
 // ---------------------------------------------------------------------------
@@ -113,20 +114,28 @@ class _RemoteSession {
 
   Future<bool> connect() async {
     try {
+      AppLogger.log('Connecting mTLS control session to $ipAddress:6466...');
       _startedCompleter = Completer<bool>();
       _socket = await SecureSocket.connect(
         ipAddress,
         6466,
         context: await _buildSecurityContext(),
-        onBadCertificate: (cert) => true, // accept TV's self-signed cert
+        onBadCertificate: (cert) => true,
         timeout: const Duration(seconds: 4),
       );
       _connected = true;
+      AppLogger.log('mTLS socket connected to $ipAddress:6466!');
 
       _sub = _socket!.listen(
         _onData,
-        onError: (e) => _disconnect(),
-        onDone: _disconnect,
+        onError: (e) {
+          AppLogger.log('Port 6466 socket error: $e');
+          _disconnect();
+        },
+        onDone: () {
+          AppLogger.log('Port 6466 socket closed by TV');
+          _disconnect();
+        },
         cancelOnError: true,
       );
 
@@ -135,17 +144,20 @@ class _RemoteSession {
         _socket!.add(GoogleTvPairingService._buildRemoteConfigurePayload());
         _socket!.add(GoogleTvPairingService._buildRemoteSetActivePayload());
         await _socket!.flush();
-      } catch (_) {}
+        AppLogger.log('Sent RemoteConfigure & RemoteSetActive to $ipAddress:6466');
+      } catch (e) {
+        AppLogger.log('Error sending handshake to 6466: $e');
+      }
 
       // Wait for RemoteStart handshake or data
       _started = await _startedCompleter.future
           .timeout(const Duration(seconds: 2), onTimeout: () {
-        // Assume session active once handshake bytes are delivered
         return true;
       });
 
       return _started;
     } catch (e) {
+      AppLogger.log('Failed to connect mTLS control session $ipAddress:6466: $e');
       _connected = false;
       return false;
     }

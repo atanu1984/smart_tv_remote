@@ -12,6 +12,7 @@ import '../widgets/volume_control.dart';
 import '../widgets/action_buttons.dart';
 import '../theme/app_theme.dart';
 import '../widgets/pin_pairing_dialog.dart';
+import '../widgets/log_viewer_dialog.dart';
 import 'scanner_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -277,6 +278,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       onPressed: _unpairCurrentDevice,
                       tooltip: 'Remove pairing (reconnect with new PIN)',
                     ),
+                  IconButton(
+                    icon: const Icon(Icons.bug_report_rounded, color: Colors.amberAccent),
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => const LogViewerDialog(),
+                      );
+                    },
+                    tooltip: 'View Diagnostic Logs',
+                  ),
                   IconButton(
                     icon: const Icon(Icons.refresh_rounded, color: AppTheme.primaryCyan),
                     onPressed: _initializeConnectivityAndDevices,

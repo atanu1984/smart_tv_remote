@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../models/smart_tv_device.dart';
+import 'app_logger.dart';
 import 'google_cast_controller.dart';
 import 'google_tv_pairing_service.dart';
 
@@ -155,7 +156,7 @@ class TvRemoteController {
     // 1. Check if device has been paired in local app storage
     final isPaired = await _pairingService.isDevicePaired(ip);
     if (!isPaired) {
-      // Initiate PIN pairing on TV screen immediately
+      AppLogger.log('Device $ip is not paired yet. Initiating PIN pairing...');
       final pairingInit = await _pairingService.initiatePairing(ip);
       return RemoteCommandResult(
         success: false,
@@ -167,8 +168,10 @@ class TvRemoteController {
     }
 
     // 2. Device is recorded as paired — send keycode via mTLS session
+    AppLogger.log('Device $ip is paired. Sending $keyName (keycode $keycode) to port 6466...');
     final sent = await _pairingService.sendAuthenticatedKeycode(ip, keycode);
     if (sent) {
+      AppLogger.log('Successfully delivered $keyName to TV ($ip:6466)');
       return RemoteCommandResult(
         success: true,
         message: 'Sent $keyName to Google TV ($ip)',
@@ -177,14 +180,25 @@ class TvRemoteController {
       );
     }
 
-    // 3. Keycode send failed — pairing may have expired or session broken.
-    //    Initiate PIN pairing again so user can enter new PIN.
-    final pairingInit = await _pairingService.initiatePairing(ip);
+    // 3. Retry once if initial send failed (e.g. idle socket reconnect)
+    AppLogger.log('Initial send of $keyName failed on $ip:6466. Retrying session...');
+    await Future.delayed(const Duration(milliseconds: 300));
+    final retrySent = await _pairingService.sendAuthenticatedKeycode(ip, keycode);
+    if (retrySent) {
+      AppLogger.log('Retry delivered $keyName to TV ($ip:6466)');
+      return RemoteCommandResult(
+        success: true,
+        message: 'Sent $keyName to Google TV ($ip)',
+        activePort: 6466,
+        timestamp: now,
+      );
+    }
+
+    AppLogger.log('Could not deliver $keyName to $ip:6466 after retry.');
     return RemoteCommandResult(
       success: false,
-      message: 'Pairing needed: ${pairingInit.message}',
-      needsPairing: true,
-      pairingIp: ip,
+      message: 'Could not deliver $keyName to TV. Check Wi-Fi connection.',
+      needsPairing: false, // DO NOT open PIN pairing dialog!
       timestamp: now,
     );
   }
