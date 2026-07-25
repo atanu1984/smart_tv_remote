@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart TV Wi-Fi Remote Control - Interactive Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --bg-dark: #0A0D14;
+      --card-bg: rgba(22, 27, 40, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --primary-cyan: #00F2FE;
+      --primary-blue: #4FACFE;
+      --accent-purple: #7F53AC;
+      --accent-magenta: #647DEE;
+      --accent-red: #FF4E50;
+      --accent-green: #00E676;
+      --text-main: #FFFFFF;
+      --text-sub: #94A3B8;
+      --text-muted: #64748B;
+      --glow-cyan: rgba(0, 242, 254, 0.35);
+      --glass-surface: rgba(30, 41, 59, 0.6);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      font-family: 'Outfit', -apple-system, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 15% 20%, rgba(0, 242, 254, 0.12) 0%, transparent 40%),
+        radial-gradient(circle at 85% 80%, rgba(127, 83, 172, 0.15) 0%, transparent 45%),
+        radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.8) 0%, #0A0D14 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+      overflow-x: hidden;
+    }
+
+    /* Page Layout */
+    .app-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .app-header h1 {
+      font-size: 26px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #00F2FE 0%, #4FACFE 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .app-header p {
+      color: var(--text-sub);
+      font-size: 14px;
+      margin-top: 6px;
+    }
+
+    .demo-container {
+      display: flex;
+      gap: 32px;
+      max-width: 1100px;
+      width: 100%;
+      justify-content: center;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    /* Simulated Mobile Device Frame */
+    .phone-frame {
+      width: 380px;
+      height: 780px;
+      background: #111522;
+      border: 8px solid #22293A;
+      border-radius: 44px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 30px rgba(0, 242, 254, 0.15);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .phone-notch {
+      width: 140px;
+      height: 24px;
+      background: #22293A;
+      border-bottom-left-radius: 16px;
+      border-bottom-right-radius: 16px;
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .notch-camera {
+      width: 10px;
+      height: 10px;
+      background: #0D111A;
+      border-radius: 50%;
+    }
+
+    .notch-speaker {
+      width: 36px;
+      height: 4px;
+      background: #1A202C;
+      border-radius: 4px;
+    }
+
+    .status-bar {
+      height: 40px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-sub);
+      margin-top: 4px;
+    }
+
+    .phone-screen {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .phone-screen::-webkit-scrollbar {
+      width: 4px;
+    }
+    .phone-screen::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+
+    /* Device Connection Header Card */
+    .connection-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(12px);
+      border-radius: 20px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+
+    .wifi-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .wifi-icon-badge {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(79, 172, 254, 0.1));
+      border: 1px solid rgba(0, 242, 254, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary-cyan);
+      font-size: 18px;
+    }
+
+    .device-meta h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .device-meta p {
+      font-size: 12px;
+      color: var(--text-sub);
+    }
+
+    .scan-btn {
+      background: linear-gradient(135deg, var(--primary-cyan), var(--primary-blue));
+      color: #000;
+      font-weight: 700;
+      font-size: 12px;
+      padding: 8px 14px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px var(--glow-cyan);
+    }
+
+    .scan-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px var(--glow-cyan);
+    }
+
+    /* Search / Movie Cast Bar */
+    .search-cast-box {
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .search-cast-box input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-size: 13px;
+      width: 100%;
+    }
+
+    .search-cast-box input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .cast-action-btn {
+      background: rgba(0, 242, 254, 0.15);
+      border: 1px solid rgba(0, 242, 254, 0.3);
+      color: var(--primary-cyan);
+      padding: 6px 10px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* App Launcher Grid */
+    .apps-row {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .apps-row::-webkit-scrollbar { display: none; }
+
+    .app-chip {
+      background: var(--glass-surface);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .app-chip:hover, .app-chip.active {
+      border-color: var(--primary-cyan);
+      background: rgba(0, 242, 254, 0.15);
+      color: var(--primary-cyan);
+    }
+
+    /* Top Action Bar (Power, Back, Home, Source) */
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .control-btn {
+      background: var(--glass-surface);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      height: 52px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-size: 16px;
+    }
+
+    .control-btn label {
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--text-sub);
+    }
+
+    .control-btn:hover {
+      border-color: var(--primary-cyan);
+      background: rgba(0, 242, 254, 0.1);
+    }
+
+    .control-btn:active {
+      transform: scale(0.94);
+      background: rgba(0, 242, 254, 0.25);
+    }
+
+    .btn-power {
+      background: rgba(255, 78, 80, 0.15);
+      border-color: rgba(255, 78, 80, 0.3);
+      color: var(--accent-red);
+    }
+
+    .btn-power.off {
+      background: rgba(100, 116, 139, 0.2);
+      border-color: var(--card-border);
+      color: var(--text-muted);
+    }
+
+    /* D-Pad Ring */
+    .dpad-container {
+      display: flex;
+      justify-content: center;
+      margin: 6px 0;
+    }
+
+    .dpad-ring {
+      width: 210px;
+      height: 210px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #191E2C 0%, #111522 100%);
+      border: 2px solid rgba(0, 242, 254, 0.3);
+      box-shadow: 0 0 25px rgba(0, 242, 254, 0.15), inset 0 0 15px rgba(0,0,0,0.5);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dpad-btn {
+      position: absolute;
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-size: 18px;
+      cursor: pointer;
+      width: 54px;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      transition: all 0.15s ease;
+    }
+
+    .dpad-btn:hover {
+      color: var(--primary-cyan);
+      text-shadow: 0 0 10px var(--primary-cyan);
+    }
+
+    .dpad-btn:active {
+      transform: scale(0.85);
+      color: #FFF;
+    }
+
+    .dpad-up { top: 10px; left: 50%; transform: translateX(-50%); }
+    .dpad-down { bottom: 10px; left: 50%; transform: translateX(-50%); }
+    .dpad-left { left: 10px; top: 50%; transform: translateY(-50%); }
+    .dpad-right { right: 10px; top: 50%; transform: translateY(-50%); }
+
+    .dpad-ok {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(79, 172, 254, 0.2));
+      border: 2px solid var(--primary-cyan);
+      color: var(--primary-cyan);
+      font-weight: 800;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 0 15px var(--glow-cyan);
+      transition: all 0.15s ease;
+    }
+
+    .dpad-ok:hover {
+      background: var(--primary-cyan);
+      color: #000;
+      box-shadow: 0 0 25px var(--primary-cyan);
+    }
+
+    .dpad-ok:active {
+      transform: scale(0.9);
+    }
+
+    /* Dual Vertical Rockers (Volume & Channel) */
+    .rockers-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .rocker-card {
+      background: var(--glass-surface);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .rocker-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-sub);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .rocker-btn {
+      width: 100%;
+      height: 46px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      color: var(--text-main);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+
+    .rocker-btn:hover {
+      border-color: var(--primary-cyan);
+      color: var(--primary-cyan);
+    }
+
+    .rocker-btn:active {
+      transform: scale(0.94);
+      background: rgba(0, 242, 254, 0.2);
+    }
+
+    .rocker-value {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--primary-cyan);
+    }
+
+    /* Virtual TV Screen Side Preview */
+    .virtual-tv-container {
+      flex: 1;
+      min-width: 340px;
+      max-width: 550px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .tv-frame {
+      width: 100%;
+      height: 310px;
+      background: #000;
+      border: 12px solid #1C2333;
+      border-radius: 16px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 30px rgba(0, 242, 254, 0.1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tv-screen-content {
+      width: 100%;
+      height: 100%;
+      background-size: cover;
+      background-position: center;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px;
+      transition: all 0.3s ease;
+    }
+
+    .tv-screen-off {
+      background: #05070B !important;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .tv-status-badge {
+      align-self: flex-start;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--primary-cyan);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tv-overlay-action {
+      align-self: center;
+      background: rgba(0, 0, 0, 0.85);
+      border: 2px solid var(--primary-cyan);
+      padding: 12px 24px;
+      border-radius: 16px;
+      color: #fff;
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 0 20px var(--glow-cyan);
+      animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.8); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .tv-stand {
+      width: 120px;
+      height: 14px;
+      background: #1C2333;
+      margin: 0 auto;
+      border-bottom-left-radius: 8px;
+      border-bottom-right-radius: 8px;
+    }
+
+    /* Live Protocol Log Box */
+    .log-box {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      height: 220px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .log-box::-webkit-scrollbar { width: 4px; }
+    .log-box::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); }
+
+    .log-entry {
+      line-height: 1.4;
+      word-break: break-all;
+    }
+    .log-entry.sent { color: var(--primary-cyan); }
+    .log-entry.success { color: var(--accent-green); }
+    .log-entry.info { color: var(--text-sub); }
+
+    /* Scanner Modal Overlay */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(10, 13, 20, 0.85);
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-card {
+      width: 360px;
+      background: #161B28;
+      border: 1px solid rgba(0, 242, 254, 0.3);
+      border-radius: 28px;
+      padding: 24px;
+      box-shadow: 0 20px 50px rgba(0, 242, 254, 0.2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes modalPop {
+      0% { transform: scale(0.9); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Radar sweep animation */
+    .radar-circle {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 2px solid rgba(0, 242, 254, 0.4);
+      background: radial-gradient(circle, rgba(0, 242, 254, 0.15) 0%, transparent 70%);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .radar-sweep {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, rgba(0, 242, 254, 0.4) 0deg, transparent 60deg);
+      animation: sweep 2s linear infinite;
+    }
+
+    @keyframes sweep {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .discovered-list {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .tv-item {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tv-item:hover, .tv-item.selected {
+      border-color: var(--primary-cyan);
+      background: rgba(0, 242, 254, 0.12);
+    }
+
+    .tv-item-title {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .tv-item-sub {
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    .close-modal-btn {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--card-border);
+      color: #fff;
+      padding: 10px;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="app-header">
+    <h1><i class="fa-solid fa-wifi"></i> Smart TV Wi-Fi Remote Control</h1>
+    <p>Connect to local Wi-Fi, scan for TVs (Samsung, LG, Roku, Android TV), & control seamlessly</p>
+  </header>
+
+  <div class="demo-container">
+
+    <!-- MOBILE PHONE FRAME -->
+    <div class="phone-frame">
+      <div class="phone-notch">
+        <div class="notch-camera"></div>
+        <div class="notch-speaker"></div>
+      </div>
+
+      <!-- Phone Status Bar -->
+      <div class="status-bar">
+        <span><i class="fa-solid fa-wifi" style="color: var(--primary-cyan);"></i> Home_WiFi_5G</span>
+        <span id="clock-time">20:42</span>
+        <span><i class="fa-solid fa-battery-three-quarters"></i> 88%</span>
+      </div>
+
+      <!-- Phone App Content -->
+      <div class="phone-screen">
+
+        <!-- Connection Card -->
+        <div class="connection-card">
+          <div class="wifi-info">
+            <div class="wifi-icon-badge">
+              <i class="fa-solid fa-tv"></i>
+            </div>
+            <div class="device-meta">
+              <h3 id="current-tv-name">Samsung QLED 4K</h3>
+              <p id="current-tv-ip">192.168.1.104 • Tizen OS</p>
+            </div>
+          </div>
+          <button class="scan-btn" onclick="openScannerModal()">
+            <i class="fa-solid fa-radar"></i> Scan
+          </button>
+        </div>
+
+        <!-- Movie Cast / Search Bar -->
+        <div class="search-cast-box">
+          <i class="fa-solid fa-magnifying-glass" style="color: var(--text-muted); font-size: 12px;"></i>
+          <input type="text" id="cast-input" placeholder="Cast movie or search title..." onkeypress="handleCastKeyPress(event)">
+          <button class="cast-action-btn" onclick="castContent()"><i class="fa-solid fa-circle-play"></i> Cast</button>
+        </div>
+
+        <!-- Quick App Shortcuts -->
+        <div class="apps-row">
+          <div class="app-chip active" onclick="launchApp('Netflix', 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=600')">
+            <i class="fa-solid fa-film" style="color: #E50914;"></i> Netflix
+          </div>
+          <div class="app-chip" onclick="launchApp('YouTube', 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=600')">
+            <i class="fa-brands fa-youtube" style="color: #FF0000;"></i> YouTube
+          </div>
+          <div class="app-chip" onclick="launchApp('Prime Video', 'https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=600')">
+            <i class="fa-solid fa-play" style="color: #00A8E1;"></i> Prime
+          </div>
+          <div class="app-chip" onclick="launchApp('Disney+', 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=600')">
+            <i class="fa-solid fa-wand-magic-sparkles" style="color: #113CCF;"></i> Disney+
+          </div>
+        </div>
+
+        <!-- Top Action Grid -->
+        <div class="action-grid">
+          <button class="control-btn btn-power" id="power-btn" onclick="togglePower()">
+            <i class="fa-solid fa-power-off"></i>
+            <label>POWER</label>
+          </button>
+          <button class="control-btn" onclick="sendRemoteCmd('BACK')">
+            <i class="fa-solid fa-arrow-left"></i>
+            <label>BACK</label>
+          </button>
+          <button class="control-btn" onclick="sendRemoteCmd('HOME')">
+            <i class="fa-solid fa-house"></i>
+            <label>HOME</label>
+          </button>
+          <button class="control-btn" onclick="sendRemoteCmd('INPUT')">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            <label>SOURCE</label>
+          </button>
+        </div>
+
+        <!-- D-Pad Controller Ring -->
+        <div class="dpad-container">
+          <div class="dpad-ring">
+            <button class="dpad-btn dpad-up" onclick="sendRemoteCmd('UP')"><i class="fa-solid fa-chevron-up"></i></button>
+            <button class="dpad-btn dpad-down" onclick="sendRemoteCmd('DOWN')"><i class="fa-solid fa-chevron-down"></i></button>
+            <button class="dpad-btn dpad-left" onclick="sendRemoteCmd('LEFT')"><i class="fa-solid fa-chevron-left"></i></button>
+            <button class="dpad-btn dpad-right" onclick="sendRemoteCmd('RIGHT')"><i class="fa-solid fa-chevron-right"></i></button>
+            <button class="dpad-ok" onclick="sendRemoteCmd('OK')">OK</button>
+          </div>
+        </div>
+
+        <!-- Dual Rockers (Volume & Channel) -->
+        <div class="rockers-row">
+          <div class="rocker-card">
+            <span class="rocker-label">VOLUME</span>
+            <button class="rocker-btn" onclick="changeVolume(1)"><i class="fa-solid fa-plus"></i></button>
+            <span class="rocker-value" id="vol-display">VOL 24</span>
+            <button class="rocker-btn" onclick="changeVolume(-1)"><i class="fa-solid fa-minus"></i></button>
+            <button class="rocker-btn" style="height:32px; font-size:12px;" onclick="toggleMute()"><i class="fa-solid fa-volume-xmark"></i> Mute</button>
+          </div>
+
+          <div class="rocker-card">
+            <span class="rocker-label">CHANNEL</span>
+            <button class="rocker-btn" onclick="changeChannel(1)"><i class="fa-solid fa-chevron-up"></i></button>
+            <span class="rocker-value" id="ch-display">CH 08</span>
+            <button class="rocker-btn" onclick="changeChannel(-1)"><i class="fa-solid fa-chevron-down"></i></button>
+            <button class="rocker-btn" style="height:32px; font-size:12px;" onclick="sendRemoteCmd('CH_PREV')"><i class="fa-solid fa-rotate-left"></i> Prev</button>
+          </div>
+        </div>
+
+        <!-- Media Playback Bar -->
+        <div class="action-grid" style="grid-template-columns: repeat(4, 1fr);">
+          <button class="control-btn" onclick="sendRemoteCmd('REWIND')"><i class="fa-solid fa-backward"></i></button>
+          <button class="control-btn" onclick="sendRemoteCmd('PLAY_PAUSE')"><i class="fa-solid fa-play"></i></button>
+          <button class="control-btn" onclick="sendRemoteCmd('STOP')"><i class="fa-solid fa-stop"></i></button>
+          <button class="control-btn" onclick="sendRemoteCmd('FAST_FWD')"><i class="fa-solid fa-forward"></i></button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- VIRTUAL TV SCREEN PREVIEW & LOGS -->
+    <div class="virtual-tv-container">
+      <div>
+        <h2 style="font-size: 16px; font-weight: 700; color: var(--text-sub); margin-bottom: 8px;">
+          <i class="fa-solid fa-desktop" style="color: var(--primary-cyan);"></i> Live Smart TV Feedback Display
+        </h2>
+        <div class="tv-frame">
+          <div class="tv-screen-content" id="tv-screen" style="background-image: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=600');">
+            <div class="tv-status-badge" id="tv-badge">
+              <i class="fa-solid fa-circle" style="color: var(--accent-green); font-size: 8px;"></i>
+              <span id="tv-badge-text">Samsung QLED • Netflix</span>
+            </div>
+
+            <div class="tv-overlay-action" id="tv-overlay" style="display: none;">
+              <i class="fa-solid fa-check"></i> Connected
+            </div>
+
+            <div style="font-size: 12px; color: rgba(255,255,255,0.7);">
+              HDMI 1 • 4K UHD 60Hz HDR
+            </div>
+          </div>
+        </div>
+        <div class="tv-stand"></div>
+      </div>
+
+      <!-- HTTP & Wi-Fi Protocol Console -->
+      <div>
+        <h2 style="font-size: 14px; font-weight: 700; color: var(--text-sub); margin-bottom: 8px;">
+          <i class="fa-solid fa-code" style="color: var(--primary-cyan);"></i> Wi-Fi Network & HTTP Protocol Logs
+        </h2>
+        <div class="log-box" id="protocol-logs">
+          <div class="log-entry info">[SYSTEM] Wi-Fi Subnet initialized: 192.168.1.0/24 (SSID: Home_WiFi_5G)</div>
+          <div class="log-entry success">[SSDP/mDNS] Discovered Samsung QLED TV at 192.168.1.104:8001</div>
+          <div class="log-entry sent">[WS CONNECT] ws://192.168.1.104:8001/api/v2/channels/samsung.remote.control</div>
+          <div class="log-entry success">[STATUS] Connection established. Ready to receive commands.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- NETWORK SCANNER MODAL -->
+  <div class="modal-overlay" id="scanner-modal">
+    <div class="modal-card">
+      <h3 style="font-size: 18px; font-weight: 800; color: #fff;">
+        <i class="fa-solid fa-radar" style="color: var(--primary-cyan);"></i> Searching Local Wi-Fi
+      </h3>
+      
+      <div class="radar-circle">
+        <div class="radar-sweep"></div>
+        <i class="fa-solid fa-tv" style="font-size: 32px; color: var(--primary-cyan); z-index: 10;"></i>
+      </div>
+
+      <p id="scan-status-text" style="font-size: 12px; color: var(--text-sub); text-align: center;">
+        Pinging subnet 192.168.1.1 - 192.168.1.254 via SSDP & mDNS...
+      </p>
+
+      <div class="discovered-list" id="discovered-tv-list">
+        <!-- Dynamic TVs inserted via JS -->
+      </div>
+
+      <button class="close-modal-btn" onclick="closeScannerModal()">Done / Close</button>
+    </div>
+  </div>
+
+  <script>
+    let isTvPowerOn = true;
+    let currentVol = 24;
+    let currentCh = 8;
+    let isMuted = false;
+    let activeTv = {
+      name: "Samsung QLED 4K",
+      ip: "192.168.1.104",
+      brand: "Tizen OS",
+      app: "Netflix"
+    };
+
+    const mockTvDevices = [
+      { name: "Samsung QLED 4K", ip: "192.168.1.104", brand: "Tizen OS", proto: "WebSocket:8001" },
+      { name: "LG OLED C2", ip: "192.168.1.108", brand: "webOS", proto: "WebSocket:3000" },
+      { name: "Roku Ultra Streaming", ip: "192.168.1.112", brand: "Roku OS", proto: "HTTP ECP:8060" },
+      { name: "Sony BRAVIA 4K", ip: "192.168.1.120", brand: "Android TV", proto: "DIAL/REST:8008" }
+    ];
+
+    function logMessage(text, type = 'sent') {
+      const logs = document.getElementById('protocol-logs');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const time = new Date().toLocaleTimeString();
+      entry.innerText = `[${time}] ${text}`;
+      logs.appendChild(entry);
+      logs.scrollTop = logs.scrollHeight;
+    }
+
+    function showTvOverlay(icon, text) {
+      if (!isTvPowerOn) return;
+      const overlay = document.getElementById('tv-overlay');
+      overlay.innerHTML = `<i class="fa-solid ${icon}"></i> ${text}`;
+      overlay.style.display = 'flex';
+
+      setTimeout(() => {
+        overlay.style.display = 'none';
+      }, 1500);
+    }
+
+    function togglePower() {
+      isTvPowerOn = !isTvPowerOn;
+      const btn = document.getElementById('power-btn');
+      const tvScreen = document.getElementById('tv-screen');
+
+      if (isTvPowerOn) {
+        btn.classList.remove('off');
+        tvScreen.classList.remove('tv-screen-off');
+        logMessage(`[POWER] Sent KeyPress: POWER_ON to ${activeTv.ip}`, 'sent');
+        logMessage(`[RESPONSE] TV Screen active (200 OK)`, 'success');
+        showTvOverlay('fa-power-off', 'Power ON');
+      } else {
+        btn.classList.add('off');
+        tvScreen.classList.add('tv-screen-off');
+        logMessage(`[POWER] Sent KeyPress: POWER_OFF to ${activeTv.ip}`, 'sent');
+        logMessage(`[RESPONSE] TV entered standby mode`, 'info');
+      }
+    }
+
+    function sendRemoteCmd(cmd) {
+      if (!isTvPowerOn) {
+        logMessage(`[ERROR] Cannot send command '${cmd}': TV is powered OFF`, 'info');
+        return;
+      }
+      logMessage(`[COMMAND] HTTP POST http://${activeTv.ip}/keypress/${cmd}`, 'sent');
+      logMessage(`[STATUS 200] Key '${cmd}' executed`, 'success');
+      
+      let icon = 'fa-gamepad';
+      if (cmd === 'UP') icon = 'fa-chevron-up';
+      if (cmd === 'DOWN') icon = 'fa-chevron-down';
+      if (cmd === 'LEFT') icon = 'fa-chevron-left';
+      if (cmd === 'RIGHT') icon = 'fa-chevron-right';
+      if (cmd === 'OK') icon = 'fa-circle-check';
+      if (cmd === 'HOME') icon = 'fa-house';
+      if (cmd === 'BACK') icon = 'fa-arrow-left';
+
+      showTvOverlay(icon, cmd);
+    }
+
+    function changeVolume(delta) {
+      if (!isTvPowerOn) return;
+      currentVol = Math.max(0, Math.min(100, currentVol + delta));
+      isMuted = false;
+      document.getElementById('vol-display').innerText = `VOL ${currentVol}`;
+      logMessage(`[VOL] POST http://${activeTv.ip}/audio/volume set to ${currentVol}`, 'sent');
+      showTvOverlay('fa-volume-high', `Volume ${currentVol}`);
+    }
+
+    function toggleMute() {
+      if (!isTvPowerOn) return;
+      isMuted = !isMuted;
+      document.getElementById('vol-display').innerText = isMuted ? 'MUTED' : `VOL ${currentVol}`;
+      logMessage(`[AUDIO] Mute state toggled: ${isMuted}`, 'sent');
+      showTvOverlay(isMuted ? 'fa-volume-xmark' : 'fa-volume-high', isMuted ? 'Muted' : `Volume ${currentVol}`);
+    }
+
+    function changeChannel(delta) {
+      if (!isTvPowerOn) return;
+      currentCh = Math.max(1, currentCh + delta);
+      document.getElementById('ch-display').innerText = `CH ${currentCh < 10 ? '0' + currentCh : currentCh}`;
+      logMessage(`[TUNER] Switch channel to ${currentCh}`, 'sent');
+      showTvOverlay('fa-tv', `Channel ${currentCh}`);
+    }
+
+    function launchApp(appName, bgUrl) {
+      if (!isTvPowerOn) return;
+      activeTv.app = appName;
+      document.getElementById('tv-badge-text').innerText = `${activeTv.name} • ${appName}`;
+      document.getElementById('tv-screen').style.backgroundImage = `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.7)), url('${bgUrl}')`;
+      
+      // Update app chips UI
+      document.querySelectorAll('.app-chip').forEach(chip => {
+        if (chip.innerText.includes(appName)) {
+          chip.classList.add('active');
+        } else {
+          chip.classList.remove('active');
+        }
+      });
+
+      logMessage(`[LAUNCH] App launch request sent: app_id=${appName.toLowerCase()}`, 'sent');
+      logMessage(`[STATUS 200] ${appName} launched on TV screen`, 'success');
+      showTvOverlay('fa-play', `Launching ${appName}`);
+    }
+
+    function castContent() {
+      const input = document.getElementById('cast-input');
+      const text = input.value.trim();
+      if (!text) return;
+      logMessage(`[CAST] Searching movie/text: "${text}"`, 'sent');
+      logMessage(`[CAST SUCCESS] Media stream sent to ${activeTv.ip}`, 'success');
+      showTvOverlay('fa-circle-play', `Casting "${text}"`);
+      input.value = '';
+    }
+
+    function handleCastKeyPress(e) {
+      if (e.key === 'Enter') castContent();
+    }
+
+    /* Modal Scanner Functions */
+    function openScannerModal() {
+      const modal = document.getElementById('scanner-modal');
+      modal.classList.add('active');
+
+      const list = document.getElementById('discovered-tv-list');
+      list.innerHTML = '';
+      document.getElementById('scan-status-text').innerText = 'Scanning 192.168.1.0/24 subnet...';
+
+      let count = 0;
+      const interval = setInterval(() => {
+        if (count < mockTvDevices.length) {
+          const device = mockTvDevices[count];
+          const item = document.createElement('div');
+          item.className = `tv-item ${device.name === activeTv.name ? 'selected' : ''}`;
+          item.innerHTML = `
+            <div>
+              <div class="tv-item-title">${device.name}</div>
+              <div class="tv-item-sub">${device.brand} • ${device.ip}</div>
+            </div>
+            <button class="cast-action-btn" style="padding:4px 8px;" onclick="connectTv('${device.name}', '${device.ip}', '${device.brand}')">Connect</button>
+          `;
+          list.appendChild(item);
+          logMessage(`[DISCOVERY] Found ${device.name} at ${device.ip} via ${device.proto}`, 'success');
+          count++;
+        } else {
+          clearInterval(interval);
+          document.getElementById('scan-status-text').innerText = `Found ${mockTvDevices.length} Smart TVs on Wi-Fi!`;
+        }
+      }, 500);
+    }
+
+    function closeScannerModal() {
+      document.getElementById('scanner-modal').classList.remove('active');
+    }
+
+    function connectTv(name, ip, brand) {
+      activeTv.name = name;
+      activeTv.ip = ip;
+      activeTv.brand = brand;
+
+      document.getElementById('current-tv-name').innerText = name;
+      document.getElementById('current-tv-ip').innerText = `${ip} • ${brand}`;
+      document.getElementById('tv-badge-text').innerText = `${name} • ${activeTv.app}`;
+
+      logMessage(`[CONNECT] Switch active TV target to ${name} (${ip})`, 'success');
+      showTvOverlay('fa-link', `Connected to ${name}`);
+      closeScannerModal();
+    }
+
+    // Auto-update phone clock
+    setInterval(() => {
+      const now = new Date();
+      const hrs = String(now.getHours()).padStart(2, '0');
+      const mins = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('clock-time').innerText = `${hrs}:${mins}`;
+    }, 1000);
+  </script>
+</body>
+</html>

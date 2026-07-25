@@ -1,0 +1,32 @@
+name: smart_tv_remote
+description: "A modern dark-themed Smart TV Wi-Fi Remote Flutter app with automatic SSDP/mDNS and HTTP subnet discovery, D-pad, media controls, TV renaming, and movie casting."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  google_fonts: ^6.1.0
+  flutter_riverpod: ^2.5.1
+  connectivity_plus: ^6.0.3
+  network_info_plus: ^5.0.3
+  http: ^1.2.1
+  dio: ^5.4.3+1
+  flutter_animate: ^4.5.0
+  font_awesome_flutter: ^10.7.0
+  shared_preferences: ^2.2.2
+  crypto: ^3.0.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
