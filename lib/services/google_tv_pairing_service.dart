@@ -462,14 +462,23 @@ class GoogleTvPairingService {
 
   /// Sends an authenticated keycode to the TV via persistent mTLS session (port 6466)
   Future<bool> sendAuthenticatedKeycode(String ipAddress, int keycode) async {
-    final payload = _buildRemoteKeycodePayload(keycode);
+    final downPayload = _buildRemoteKeycodeActionPayload(keycode, 1);
+    final upPayload = _buildRemoteKeycodeActionPayload(keycode, 2);
 
+    final downSent = await _sendPayload(ipAddress, downPayload);
+    if (!downSent) return false;
+
+    await Future.delayed(const Duration(milliseconds: 50));
+    final upSent = await _sendPayload(ipAddress, upPayload);
+    return downSent && upSent;
+  }
+
+  Future<bool> _sendPayload(String ipAddress, List<int> payload) async {
     // 1. Try to reuse existing session
     var session = _sessions[ipAddress];
     if (session != null && session._connected) {
       final sent = await session.sendKeycode(payload);
       if (sent) return true;
-      // Session broken — remove and reconnect
       _sessions.remove(ipAddress)?.dispose();
     }
 
@@ -726,40 +735,32 @@ class GoogleTvPairingService {
   /// Builds a RemoteMessage { RemoteConfigure remote_configure = 1; }
   static List<int> _buildRemoteConfigurePayload() {
     final info = [
-      ..._encodeString(1, 'Google'),  // vendor
-      ..._encodeString(2, 'Android'), // model
+      ..._encodeString(1, 'Smart TV Remote'),
     ];
-    final configMsg = [
-      ..._encodeInt(1, 622),          // code1 = 622
-      ..._encodeSubMessage(2, info),  // device_info = field 2
+    final configInner = [
+      ..._encodeSubMessage(1, info),
     ];
-    final remoteMsg = _encodeSubMessage(1, configMsg);
+    final remoteMsg = _encodeSubMessage(1, configInner);
     return _wrapWithVarintLength(remoteMsg);
   }
 
-  /// Builds a RemoteMessage { RemoteSetActive remote_set_active = 20; }
+  /// Builds a RemoteMessage { RemoteSetActive remote_set_active = 2; }
   static List<int> _buildRemoteSetActivePayload() {
     final setActiveMsg = [
-      ..._encodeInt(1, 1), // active = 1
+      ..._encodeInt(1, 1),
     ];
-    final remoteMsg = _encodeSubMessage(20, setActiveMsg);
+    final remoteMsg = _encodeSubMessage(2, setActiveMsg);
     return _wrapWithVarintLength(remoteMsg);
   }
 
-  /// Builds a RemoteMessage { RemoteKeyInject remote_key_inject = 4; }
-  /// per the remotemessage.proto specification.
-  ///
-  /// RemoteKeyInject { key_code = 1; direction = 2; }
-  /// RemoteDirection: SHORT = 0 (press + release combined)
-  static List<int> _buildRemoteKeycodePayload(int keycode) {
+  /// Builds a RemoteMessage { RemoteKeyInject remote_key_inject = 3; }
+  /// Key Down (action = 1) or Key Up (action = 2)
+  static List<int> _buildRemoteKeycodeActionPayload(int keycode, int action) {
     final keyInjectMsg = [
-      ..._encodeInt(1, keycode), // RemoteKeyCode key_code
-      ..._encodeInt(2, 0),       // RemoteDirection direction = SHORT
+      ..._encodeInt(1, keycode),
+      ..._encodeInt(2, action),
     ];
-
-    // Outer RemoteMessage wraps RemoteKeyInject at field 4
-    final remoteMsg = _encodeSubMessage(4, keyInjectMsg);
-
+    final remoteMsg = _encodeSubMessage(3, keyInjectMsg);
     return _wrapWithVarintLength(remoteMsg);
   }
 }

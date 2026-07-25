@@ -77,15 +77,26 @@ class GoogleCastController {
 
   static int _requestId = 100;
   static double _currentVolumeLevel = 0.35;
+  static double _preMuteVolumeLevel = 0.35;
   static bool _isMuted = false;
 
   static Map<String, dynamic> _buildVolumePayload(RemoteCommand command) {
     _requestId++;
     if (command == RemoteCommand.volumeMute) {
       _isMuted = !_isMuted;
+      if (_isMuted) {
+        _preMuteVolumeLevel = _currentVolumeLevel > 0.0 ? _currentVolumeLevel : 0.35;
+        _currentVolumeLevel = 0.0;
+      } else {
+        _currentVolumeLevel = _preMuteVolumeLevel;
+      }
+
       return {
         'type': 'SET_VOLUME',
-        'volume': {'muted': _isMuted},
+        'volume': {
+          'level': double.parse(_currentVolumeLevel.toStringAsFixed(2)),
+          'muted': _isMuted,
+        },
         'requestId': _requestId,
       };
     }
