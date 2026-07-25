@@ -112,6 +112,13 @@ class _RemoteSession {
 
   _RemoteSession(this.ipAddress);
 
+  void _sendTx(List<int> bytes, String desc) {
+    if (_socket == null || !_connected) return;
+    final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0').toUpperCase()).join(' ');
+    AppLogger.log('TV Tx on 6466 ($ipAddress) [$desc]: $hex');
+    _socket!.add(bytes);
+  }
+
   Future<bool> connect() async {
     try {
       AppLogger.log('Connecting mTLS control session to $ipAddress:6466...');
@@ -139,18 +146,19 @@ class _RemoteSession {
         cancelOnError: true,
       );
 
-      // Protocol Handshake: Send RemoteConfigure & RemoteSetActive with necessary delay for Android TLS
+      // Protocol Handshake: Send RemoteConfigure & RemoteSetActive
       try {
         if (_socket == null || !_connected) return false;
-        _socket!.add(GoogleTvPairingService._buildRemoteConfigurePayload());
+        final cfgPayload = GoogleTvPairingService._buildRemoteConfigurePayload();
+        _sendTx(cfgPayload, 'RemoteConfigure');
         await _socket!.flush();
         await Future.delayed(const Duration(milliseconds: 150));
 
         if (_socket == null || !_connected) return false;
-        _socket!.add(GoogleTvPairingService._buildRemoteSetActivePayload());
+        final activePayload = GoogleTvPairingService._buildRemoteSetActivePayload();
+        _sendTx(activePayload, 'RemoteSetActive');
         await _socket!.flush();
         await Future.delayed(const Duration(milliseconds: 150));
-        AppLogger.log('Sent RemoteConfigure & RemoteSetActive to $ipAddress:6466');
       } catch (e) {
         AppLogger.log('Error sending handshake to 6466: $e');
       }
@@ -177,8 +185,7 @@ class _RemoteSession {
     // Detect TV RemotePing (exact sequence: 0x12 0x02 0x3A 0x00) and reply with RemotePong (02 3A 00)
     for (int i = 0; i <= data.length - 4; i++) {
       if (data[i] == 0x12 && data[i + 1] == 0x02 && data[i + 2] == 0x3A && data[i + 3] == 0x00) {
-        AppLogger.log('Received RemotePing from TV ($ipAddress). Sending RemotePong (02 3A 00)...');
-        _socket?.add([0x02, 0x3A, 0x00]);
+        _sendTx([0x02, 0x3A, 0x00], 'RemotePong');
         _socket?.flush();
         break;
       }
@@ -200,15 +207,13 @@ class _RemoteSession {
     _socket = null;
   }
 
-  Future<bool> sendKeycode(List<int> payload) async {
+  Future<bool> sendKeycode(List<int> payload, [String desc = 'KeyInject']) async {
     if (!_connected || _socket == null) {
       AppLogger.log('sendKeycode aborted on 6466 ($ipAddress): socket connected=$_connected');
       return false;
     }
     try {
-      final hex = payload.map((b) => b.toRadixString(16).padLeft(2, '0').toUpperCase()).join(' ');
-      AppLogger.log('Flushing keycode payload to 6466 ($ipAddress): $hex');
-      _socket!.add(payload);
+      _sendTx(payload, desc);
       await _socket!.flush();
       return true;
     } catch (e) {
@@ -463,19 +468,19 @@ class GoogleTvPairingService {
     final downPayload = _buildRemoteKeycodeActionPayload(keycode, 1);
     final upPayload = _buildRemoteKeycodeActionPayload(keycode, 2);
 
-    final downSent = await _sendPayload(ipAddress, downPayload);
+    final downSent = await _sendPayload(ipAddress, downPayload, 'KeyInject Down ($keycode)');
     if (!downSent) return false;
 
     await Future.delayed(const Duration(milliseconds: 50));
-    final upSent = await _sendPayload(ipAddress, upPayload);
+    final upSent = await _sendPayload(ipAddress, upPayload, 'KeyInject Up ($keycode)');
     return downSent && upSent;
   }
 
-  Future<bool> _sendPayload(String ipAddress, List<int> payload) async {
+  Future<bool> _sendPayload(String ipAddress, List<int> payload, String desc) async {
     // 1. Try to reuse existing session
     var session = _sessions[ipAddress];
     if (session != null && session._connected) {
-      final sent = await session.sendKeycode(payload);
+      final sent = await session.sendKeycode(payload, desc);
       if (sent) return true;
       _sessions.remove(ipAddress)?.dispose();
     }
@@ -486,7 +491,7 @@ class GoogleTvPairingService {
       final connected = await newSession.connect();
       if (connected) {
         _sessions[ipAddress] = newSession;
-        final sent = await newSession.sendKeycode(payload);
+        final sent = await newSession.sendKeycode(payload, desc);
         if (sent) return true;
       } else {
         newSession.dispose();
