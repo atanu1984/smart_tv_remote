@@ -141,10 +141,12 @@ class _RemoteSession {
 
       // Protocol Handshake: Send RemoteConfigure & RemoteSetActive with necessary delay for Android TLS
       try {
+        if (_socket == null || !_connected) return false;
         _socket!.add(GoogleTvPairingService._buildRemoteConfigurePayload());
         await _socket!.flush();
         await Future.delayed(const Duration(milliseconds: 150));
 
+        if (_socket == null || !_connected) return false;
         _socket!.add(GoogleTvPairingService._buildRemoteSetActivePayload());
         await _socket!.flush();
         await Future.delayed(const Duration(milliseconds: 150));
@@ -172,11 +174,14 @@ class _RemoteSession {
     final hex = data.map((b) => b.toRadixString(16).padLeft(2, '0').toUpperCase()).join(' ');
     AppLogger.log('TV Rx on 6466 ($ipAddress): $hex');
 
-    // Detect RemotePing (field tag 0x32 = field 6, wire type 2)
-    // and respond with RemotePong (field 7, wire type 2, empty body = 0x3A 0x00)
+    // Detect RemotePing (field tag 0x32 or 0x3A) and reply with RemotePong
+    bool sentPong = false;
     for (int i = 0; i < data.length; i++) {
-      if (data[i] == 0x32) {
+      if ((data[i] == 0x32 || data[i] == 0x3A) && !sentPong) {
+        sentPong = true;
+        AppLogger.log('Sending RemotePong to TV ($ipAddress)...');
         _socket?.add([0x02, 0x3A, 0x00]);
+        _socket?.add([0x08, 0x05, 0x12, 0x02, 0x3A, 0x00]);
         _socket?.flush();
       }
     }
