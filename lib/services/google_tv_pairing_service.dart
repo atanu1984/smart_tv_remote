@@ -169,20 +169,18 @@ class _RemoteSession {
 
   void _onData(List<int> data) {
     if (data.isEmpty) return;
+    final hex = data.map((b) => b.toRadixString(16).padLeft(2, '0').toUpperCase()).join(' ');
+    AppLogger.log('TV Rx on 6466 ($ipAddress): $hex');
 
     // Detect RemotePing (field tag 0x32 = field 6, wire type 2)
     // and respond with RemotePong (field 7, wire type 2, empty body = 0x3A 0x00)
-    // wrapped with the protocol's 1-byte length prefix.
     for (int i = 0; i < data.length; i++) {
       if (data[i] == 0x32) {
-        // Pong: outer_len=2, tag=0x3A, inner_len=0
         _socket?.add([0x02, 0x3A, 0x00]);
         _socket?.flush();
       }
     }
 
-    // RemoteStart detection: tag 0xF8 0x01 (field 31, wire type 0) or
-    // simplified: any data arriving means the TV accepted our connection
     if (!_startedCompleter.isCompleted) {
       _startedCompleter.complete(true);
       _started = true;
@@ -190,6 +188,7 @@ class _RemoteSession {
   }
 
   void _disconnect() {
+    AppLogger.log('Disconnecting mTLS control session $ipAddress:6466');
     _connected = false;
     _started = false;
     if (!_startedCompleter.isCompleted) _startedCompleter.complete(false);
@@ -199,12 +198,18 @@ class _RemoteSession {
   }
 
   Future<bool> sendKeycode(List<int> payload) async {
-    if (!_connected || _socket == null) return false;
+    if (!_connected || _socket == null) {
+      AppLogger.log('sendKeycode aborted on 6466 ($ipAddress): socket connected=$_connected');
+      return false;
+    }
     try {
+      final hex = payload.map((b) => b.toRadixString(16).padLeft(2, '0').toUpperCase()).join(' ');
+      AppLogger.log('Flushing keycode payload to 6466 ($ipAddress): $hex');
       _socket!.add(payload);
       await _socket!.flush();
       return true;
-    } catch (_) {
+    } catch (e) {
+      AppLogger.log('sendKeycode Exception on 6466 ($ipAddress): $e');
       _disconnect();
       return false;
     }
