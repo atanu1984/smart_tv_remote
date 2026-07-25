@@ -276,31 +276,24 @@ class GoogleTvPairingService {
         (data) {
           _pairingResponseBuffer.addAll(data);
         },
-        onError: (_) => cancelPairing(),
-        onDone: () => cancelPairing(),
+        onError: (_) {},
+        onDone: () {},
         cancelOnError: false,
       );
 
       // Step 1: Send PairingRequest (field 10)
-      final reqPayload = _buildPairingRequestPayload();
-      socket.add(reqPayload);
+      socket.add(_buildPairingRequestPayload());
       await socket.flush();
-
       await Future.delayed(const Duration(milliseconds: 250));
 
       // Step 2: Send PairingOption (field 20)
-      final optPayload = _buildPairingOptionPayload();
-      socket.add(optPayload);
+      socket.add(_buildPairingOptionPayload());
       await socket.flush();
-
       await Future.delayed(const Duration(milliseconds: 250));
 
-      // Step 3: Send PairingConfiguration (field 30) — triggers TV on-screen PIN overlay & returns PairingConfigurationAck
-      final configPayload = _buildPairingConfigurationPayload();
-      socket.add(configPayload);
+      // Step 3: Send PairingConfiguration (field 30) — triggers TV on-screen PIN overlay
+      socket.add(_buildPairingConfigurationPayload());
       await socket.flush();
-
-      // DO NOT close socket here! The TV requires port 6467 to stay connected to keep the PIN overlay visible.
 
       return PairingResult(
         success: true,
@@ -336,6 +329,7 @@ class GoogleTvPairingService {
       if (_activePairingSocket != null) {
         socket = _activePairingSocket!;
       } else {
+        // Reconnect socket and initialize session steps 1-3 FIRST before sending secret
         socket = await SecureSocket.connect(
           ipAddress,
           6467,
@@ -349,16 +343,30 @@ class GoogleTvPairingService {
           (data) {
             _pairingResponseBuffer.addAll(data);
           },
-          onError: (_) => cancelPairing(),
-          onDone: () => cancelPairing(),
+          onError: (_) {},
+          onDone: () {},
           cancelOnError: false,
         );
+
+        // Perform steps 1-3 on the new socket
+        socket.add(_buildPairingRequestPayload());
+        await socket.flush();
+        await Future.delayed(const Duration(milliseconds: 200));
+
+        socket.add(_buildPairingOptionPayload());
+        await socket.flush();
+        await Future.delayed(const Duration(milliseconds: 200));
+
+        socket.add(_buildPairingConfigurationPayload());
+        await socket.flush();
+        await Future.delayed(const Duration(milliseconds: 200));
       }
 
       _pairingResponseBuffer.clear();
 
-      // Extract client cert modulus from embedded PEM (no socket.certificate getter in Dart)
-      final clientCertDer = _pemToDer(_kClientCertPem);
+      // Extract client cert modulus from active certificate bytes (guarantees match with TLS handshake)
+      final activeCertBytes = await ClientCertificateService().getClientCertBytes();
+      final clientCertDer = _pemToDer(utf8.decode(activeCertBytes));
       final serverCertDer = List<int>.from(socket.peerCertificate?.der ?? []);
       final clientMod = _extractRsaModulusFromCertDer(clientCertDer);
       final serverMod = _extractRsaModulusFromCertDer(serverCertDer);
