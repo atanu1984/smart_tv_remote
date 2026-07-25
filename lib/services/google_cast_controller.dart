@@ -75,19 +75,35 @@ class GoogleCastController {
     }
   }
 
+  static int _requestId = 100;
+  static double _currentVolumeLevel = 0.35;
+  static bool _isMuted = false;
+
   static Map<String, dynamic> _buildVolumePayload(RemoteCommand command) {
+    _requestId++;
     if (command == RemoteCommand.volumeMute) {
+      _isMuted = !_isMuted;
       return {
         'type': 'SET_VOLUME',
-        'volume': {'muted': true},
+        'volume': {'muted': _isMuted},
+        'requestId': _requestId,
       };
     }
-    // For volume up / down: send volume step payload
+
+    if (command == RemoteCommand.volumeUp) {
+      _currentVolumeLevel = (_currentVolumeLevel + 0.05).clamp(0.0, 1.0);
+      _isMuted = false;
+    } else if (command == RemoteCommand.volumeDown) {
+      _currentVolumeLevel = (_currentVolumeLevel - 0.05).clamp(0.0, 1.0);
+    }
+
     return {
       'type': 'SET_VOLUME',
       'volume': {
-        'step': command == RemoteCommand.volumeUp ? 0.05 : -0.05,
+        'level': double.parse(_currentVolumeLevel.toStringAsFixed(2)),
+        'muted': _isMuted,
       },
+      'requestId': _requestId,
     };
   }
 

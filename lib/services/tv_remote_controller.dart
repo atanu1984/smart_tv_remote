@@ -207,11 +207,19 @@ class TvRemoteController {
       );
     }
 
-    AppLogger.log('Could not deliver $keyName to $ip:6466 after retry.');
+    // 4. Fall back to Google Cast Port 8009 (0-pairing key injection)
+    AppLogger.log('Falling back to Google Cast Port 8009 for $keyName...');
+    final castRes = await GoogleCastController.sendCastCommand(ipAddress: ip, command: command);
+    if (castRes.success) {
+      AppLogger.log('Delivered $keyName via Google Cast Port 8009 fallback');
+      return castRes;
+    }
+
+    AppLogger.log('Could not deliver $keyName to $ip. Check Wi-Fi connection.');
     return RemoteCommandResult(
       success: false,
       message: 'Could not deliver $keyName to TV. Check Wi-Fi connection.',
-      needsPairing: false, // DO NOT open PIN pairing dialog!
+      needsPairing: false,
       timestamp: now,
     );
   }

@@ -139,11 +139,15 @@ class _RemoteSession {
         cancelOnError: true,
       );
 
-      // Protocol Handshake: Send RemoteConfigure & RemoteSetActive
+      // Protocol Handshake: Send RemoteConfigure & RemoteSetActive with necessary delay for Android TLS
       try {
         _socket!.add(GoogleTvPairingService._buildRemoteConfigurePayload());
+        await _socket!.flush();
+        await Future.delayed(const Duration(milliseconds: 150));
+
         _socket!.add(GoogleTvPairingService._buildRemoteSetActivePayload());
         await _socket!.flush();
+        await Future.delayed(const Duration(milliseconds: 150));
         AppLogger.log('Sent RemoteConfigure & RemoteSetActive to $ipAddress:6466');
       } catch (e) {
         AppLogger.log('Error sending handshake to 6466: $e');
