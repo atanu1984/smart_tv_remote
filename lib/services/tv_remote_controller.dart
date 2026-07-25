@@ -476,7 +476,7 @@ class TvRemoteController {
       case RemoteCommand.volumeDown:
         return 25;  // KEYCODE_VOLUME_DOWN
       case RemoteCommand.volumeMute:
-        return 164; // KEYCODE_VOLUME_MUTE
+        return 91;  // KEYCODE_MUTE (Standard hardware mute for TCL TV)
       case RemoteCommand.power:
         return 26;  // KEYCODE_POWER
       case RemoteCommand.playPause:
